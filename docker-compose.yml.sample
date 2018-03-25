@@ -1,0 +1,24 @@
+version: '2'
+services:
+
+  wormhole1:
+    image: mahito/slack-wormhole-gcp
+    environment:
+      HUBOT_WORMHOLE_TOPIC_NAME: topic_name
+      HUBOT_WORMHOLE_SUBSCRIPTION_NAME: subscription_name
+      HUBOT_GCP_PROJECT_ID: project_id
+      GOOGLE_APPLICATION_CREDENTIALS: path
+      HUBOT_WORMHOLE_IN: 'yes'
+      HUBOT_WORMHOLE_OUT: 'yes'
+      HUBOT_SLACK_TOKEN: slack_token
+
+  wormhole2:
+    image: mahito/slack-wormhole-gcp
+    environment:
+      HUBOT_WORMHOLE_TOPIC_NAME: topic_name
+      HUBOT_WORMHOLE_SUBSCRIPTION_NAME: subscription_name
+      HUBOT_GCP_PROJECT_ID: project_id
+      GOOGLE_APPLICATION_CREDENTIALS: path
+      HUBOT_WORMHOLE_IN: 'yes'
+      HUBOT_WORMHOLE_OUT: 'yes'
+      HUBOT_SLACK_TOKEN: slack_token

@@ -1,0 +1,6 @@
+*.swp
+.hubot_history
+.editorconfig
+node_modules/
+bin/*.sh
+docker-compose.yml
