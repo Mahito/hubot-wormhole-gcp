@@ -35,7 +35,7 @@ module.exports = (robot) ->
       robot.adapter.client.web.conversations.info(res.message.room)
         .then((response) ->
           room = response.channel.name
-          payload = { username: username, icon_url: icon, text: res.message.text, as_user: false, room: room }
+          payload = { username: username, icon_url: icon, text: res.message.rawText, as_user: false, room: room }
           topic.publisher()
                .publish(Buffer.from(JSON.stringify(payload)))
                .catch((err) ->
