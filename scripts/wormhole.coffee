@@ -56,34 +56,62 @@ module.exports = (robot) ->
                 )
         )
 
+    message_changed = (event) ->
+      topicName = process.env.HUBOT_WORMHOLE_TOPIC_NAME
+      topic = pubsubClient.topic(topicName)
+
+      robot.adapter.client.web.channels.info(event.channel.id)
+        .then((res) ->
+          room = res.channel.name
+          payload = {
+                      action: "update",
+                      posted: event.message.ts,
+                      text: event.message.text,
+                    }
+
+          topic.publisher()
+               .publish(Buffer.from(JSON.stringify(payload)))
+               .catch((err) ->
+                 robot.send {room: room}, {text: err};
+               )
+        )
+        .catch((err) ->
+          robot.send {room: event.channel.id}, {text: err};
+        )
+
+    message_deleted = (event) ->
+      topicName = process.env.HUBOT_WORMHOLE_TOPIC_NAME
+      topic = pubsubClient.topic(topicName)
+
+      robot.adapter.client.web.channels.info(event.channel.id)
+        .then((res) ->
+          room = res.channel.name
+          payload = {
+                      action: "delete",
+                      posted: event.previous_message.ts,
+                    }
+
+          topic.publisher()
+               .publish(Buffer.from(JSON.stringify(payload)))
+               .catch((err) ->
+                 robot.send {room: room}, {text: err};
+               )
+        )
+        .catch((err) ->
+          robot.send {room: event.channel.id}, {text: err};
+        )
+
 
     robot.adapter.client.rtm.on 'message', (event) ->
-      if event.type is 'message' and event.subtype isnt 'message_changed'
-        return
+      if event.type is 'message'
+        if event.subtype isnt 'message_changed' and event.subtype isnt 'message_deleted'
+          return
 
-      if event.type is 'message' and event.subtype is 'message_changed'
-        topicName = process.env.HUBOT_WORMHOLE_TOPIC_NAME
-        topic = pubsubClient.topic(topicName)
+        if event.subtype is 'message_changed'
+          message_changed(event)
 
-        robot.adapter.client.web.channels.info(event.channel.id)
-          .then((res) ->
-            room = res.channel.name
-            payload = {
-                        action: "update",
-                        posted: event.message.ts,
-                        text: event.message.text,
-                        room: room,
-                      }
-
-            topic.publisher()
-                 .publish(Buffer.from(JSON.stringify(payload)))
-                 .catch((err) ->
-                   robot.send {room: room}, {text: err};
-                 )
-          )
-          .catch((err) ->
-            robot.send {room: event.channel.id}, {text: err};
-          )
+        if event.subtype is 'message_deleted'
+          message_deleted(event)
 
     if isOut == 'yes'
       subscriptionName = process.env.HUBOT_WORMHOLE_SUBSCRIPTION_NAME
@@ -122,6 +150,24 @@ module.exports = (robot) ->
               data.forEach((d) ->
                 robot.adapter.client.web.chat.update(d.timestamp, d.channelID, payload['text'])
                   .then(() ->)
+              )
+            )
+
+        else if payload['action'] == 'delete'
+          query = datastore.createQuery('wormhole')
+                           .filter('originalTs', '=', payload['posted'])
+                           .limit(1)
+
+          datastore.runQuery(query)
+            .then((result) ->
+              data = result[0]
+              data.forEach((d) ->
+                robot.adapter.client.web.chat.delete(d.timestamp, d.channelID)
+                  .then(() ->
+                    datastoreKey = datastore.key(['wormhole', Number(d[datastore.KEY].id)])
+                    datastore.delete(datastoreKey)
+                    .then(() -> )
+                  )
               )
             )
 
