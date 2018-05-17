@@ -9,6 +9,7 @@ ADD external-scripts.json /bot/external-scripts.json
 ADD package.json /bot/package.json
 ADD package-lock.json /bot/package-lock.json
 ADD scripts /bot/scripts
+RUN cd /bot && npm install
 
 WORKDIR /bot
 
