@@ -126,6 +126,7 @@ module.exports = (robot) ->
           allow_channels = process.env.HUBOT_WORMHOLE_ALLOW_CHANNELS.split(',')
 
           if allow_channels && not allow_channels.includes(room)
+            message.ack()
             return
 
           if payload['action'] == 'post'
