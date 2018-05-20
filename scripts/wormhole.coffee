@@ -67,6 +67,7 @@ module.exports = (robot) ->
                       action: "update",
                       posted: event.message.ts,
                       text: event.message.text,
+                      room: room,
                     }
 
           topic.publisher()
@@ -89,6 +90,7 @@ module.exports = (robot) ->
           payload = {
                       action: "delete",
                       posted: event.previous_message.ts,
+                      room: room,
                     }
 
           topic.publisher()
@@ -120,9 +122,13 @@ module.exports = (robot) ->
 
         messageHandler = (message) ->
           payload = JSON.parse(message.data)
+          room = payload['room']
+          allow_channels = process.env.HUBOT_WORMHOLE_ALLOW_CHANNELS.split(',')
+
+          if allow_channels && not allow_channels.includes(room)
+            return
 
           if payload['action'] == 'post'
-            room = payload['room']
             robot.adapter.client.web.chat.postMessage(room, payload['text'], payload)
               .then((res) ->
                 datastoreKey = datastore.key([subscriptionName])
@@ -138,7 +144,7 @@ module.exports = (robot) ->
                   .catch((err) ->
                     robot.send {room: room}, {text: err}
                   )
-            )
+              )
 
           else if payload['action'] == 'update'
             query = datastore.createQuery(subscriptionName)
