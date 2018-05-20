@@ -114,63 +114,64 @@ module.exports = (robot) ->
           message_deleted(event)
 
     if isOut == 'yes'
-      subscriptionName = process.env.HUBOT_WORMHOLE_SUBSCRIPTION_NAME
-      subscription = pubsubClient.subscription(subscriptionName)
+      subscriptionNames = process.env.HUBOT_WORMHOLE_SUBSCRIPTION_NAMES
+      for subscriptionName in subscriptionNames.split(',')
+        subscription = pubsubClient.subscription(subscriptionName)
 
-      messageHandler = (message) ->
-        payload = JSON.parse(message.data)
+        messageHandler = (message) ->
+          payload = JSON.parse(message.data)
 
-        if payload['action'] == 'post'
-          room = payload['room']
-          robot.adapter.client.web.chat.postMessage(room, payload['text'], payload)
-            .then((res) ->
-              datastoreKey = datastore.key(['wormhole'])
-              data = {
-                originalTs: payload['posted'],
-                timestamp: res.message.ts,
-                channelID: res.channel
-              }
-              entity = { key: datastoreKey, data: data }
+          if payload['action'] == 'post'
+            room = payload['room']
+            robot.adapter.client.web.chat.postMessage(room, payload['text'], payload)
+              .then((res) ->
+                datastoreKey = datastore.key([subscriptionName])
+                data = {
+                  originalTs: payload['posted'],
+                  timestamp: res.message.ts,
+                  channelID: res.channel
+                }
+                entity = { key: datastoreKey, data: data }
 
-              datastore.save(entity)
-                .then(() -> )
-                .catch((err) ->
-                  robot.send {room: room}, {text: err}
-                )
-          )
-
-        else if payload['action'] == 'update'
-          query = datastore.createQuery('wormhole')
-                           .filter('originalTs', '=', payload['posted'])
-                           .limit(1)
-
-          datastore.runQuery(query)
-            .then((result) ->
-              data = result[0]
-              data.forEach((d) ->
-                robot.adapter.client.web.chat.update(d.timestamp, d.channelID, payload['text'])
-                  .then(() ->)
-              )
-            )
-
-        else if payload['action'] == 'delete'
-          query = datastore.createQuery('wormhole')
-                           .filter('originalTs', '=', payload['posted'])
-                           .limit(1)
-
-          datastore.runQuery(query)
-            .then((result) ->
-              data = result[0]
-              data.forEach((d) ->
-                robot.adapter.client.web.chat.delete(d.timestamp, d.channelID)
-                  .then(() ->
-                    datastoreKey = datastore.key(['wormhole', Number(d[datastore.KEY].id)])
-                    datastore.delete(datastoreKey)
-                    .then(() -> )
+                datastore.save(entity)
+                  .then(() -> )
+                  .catch((err) ->
+                    robot.send {room: room}, {text: err}
                   )
-              )
             )
 
-        message.ack()
+          else if payload['action'] == 'update'
+            query = datastore.createQuery(subscriptionName)
+                             .filter('originalTs', '=', payload['posted'])
+                             .limit(1)
 
-      subscription.on('message', messageHandler)
+            datastore.runQuery(query)
+              .then((result) ->
+                data = result[0]
+                data.forEach((d) ->
+                  robot.adapter.client.web.chat.update(d.timestamp, d.channelID, payload['text'])
+                    .then(() ->)
+                )
+              )
+
+          else if payload['action'] == 'delete'
+            query = datastore.createQuery(subscriptionName)
+                             .filter('originalTs', '=', payload['posted'])
+                             .limit(1)
+
+            datastore.runQuery(query)
+              .then((result) ->
+                data = result[0]
+                data.forEach((d) ->
+                  robot.adapter.client.web.chat.delete(d.timestamp, d.channelID)
+                    .then(() ->
+                      datastoreKey = datastore.key([subscriptionName, Number(d[datastore.KEY].id)])
+                      datastore.delete(datastoreKey)
+                      .then(() -> )
+                    )
+                )
+              )
+
+          message.ack()
+
+        subscription.on('message', messageHandler)
