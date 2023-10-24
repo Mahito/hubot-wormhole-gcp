@@ -19,8 +19,8 @@
     "hubot-rules": "^0.1.2",
     "hubot-scripts": "^2.17.2",
     "hubot-shipit": "^0.2.1",
-    "hubot-slack": "^4.4.0",
-    "npm": "^6.0.1"
+    "hubot-slack": "^4.10.0",
+    "npm": "^6.14.18"
   },
   "engines": {
     "node": "0.10.x"
